@@ -9,16 +9,16 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Redirect root "/" to /admin/login */}
-      <Route path="/" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Public routes */}
       <Route element={<PublicRoute />}>
-        <Route path="/admin/login" element={<Login />} />
+        <Route path="/login" element={<Login />} />
       </Route>
 
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/admin/dashboard" element={<DashboardLayout />} />
+        <Route path="/dashboard" element={<DashboardLayout />} />
       </Route>
 
       {/* Optional 404 */}
