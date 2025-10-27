@@ -33,7 +33,7 @@ useEffect(() => {
   const token = localStorage.getItem("access_token");
   
   if (!token) {
-    navigate("/admin/login");
+    navigate("/login");
   }
 }, [navigate]); 
   const menuItems = [
@@ -48,7 +48,7 @@ useEffect(() => {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_data");
-    navigate("/admin/login");
+    navigate("/login");
   };
 
   return (

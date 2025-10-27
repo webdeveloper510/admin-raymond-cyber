@@ -231,24 +231,6 @@ const Login = () => {
               Cancel
             </Button>
           </Box>
-
-          <Box textAlign="center" mt={1}>
-            <Link
-              href="forgot-password"
-              underline="none"
-              sx={{
-                color: "#669DB1",
-                fontSize: "13px",
-                fontWeight: 600,
-                fontFamily: "gilroy",
-                "&:hover": {
-                  textDecoration: "underline",
-                },
-              }}
-            >
-              Forgot your password?
-            </Link>
-          </Box>
         </form>
       </Paper>
     </Box>
