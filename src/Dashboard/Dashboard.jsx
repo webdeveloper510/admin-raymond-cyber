@@ -41,7 +41,7 @@ const DashboardOverview = () => {
     approved: 0,
     rejected: 0,
   });
-  
+
   // Reject Dialog States
   const [openRejectDialog, setOpenRejectDialog] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -56,17 +56,18 @@ const DashboardOverview = () => {
     try {
       const response = await getRequestList();
 
-      const formattedData = response?.data?.users?.map((item) => ({
-        id: item.id || "N/A",
-        company: item.company_name || "Unknown Company",
-        email: item.email || "-",
-        employees: item.no_of_employees || 0,
-        status: item.status || "Pending",
-        startDate: item.created_at
-          ? new Date(item.created_at).toLocaleDateString()
-          : "-",
-        endDate: "-",
-      })) || [];
+      const formattedData =
+        response?.data?.users?.map((item) => ({
+          id: item.id || "N/A",
+          company: item.company_name || "Unknown Company",
+          email: item.email || "-",
+          employees: item.no_of_employees || 0,
+          status: item.status || "Pending",
+          startDate: item.created_at
+            ? new Date(item.created_at).toLocaleDateString()
+            : "-",
+          endDate: "-",
+        })) || [];
 
       setCompanyProgress(formattedData);
 
@@ -110,7 +111,7 @@ const DashboardOverview = () => {
           type: "success",
           text: "Company rejected successfully!",
         });
-        
+
         // Refresh the list after 1.5 seconds
         setTimeout(() => {
           fetchRequestList();
@@ -210,83 +211,99 @@ const DashboardOverview = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 2.5,
+          mb: 3,
+          flexWrap: "nowrap",
+        }}
+      >
         {statsCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card
+          <Card
+            key={index}
+            sx={{
+              flex: 1, // ensures equal width
+              borderRadius: "16px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              border: "1px solid #e8eef2",
+              bgcolor: "#fff",
+              height: 200, // fixed equal height
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <IconButton
               sx={{
-                borderRadius: "16px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                border: "1px solid #e8eef2",
-                bgcolor: "#fff",
-                height: "100%",
+                position: "absolute",
+                top: 12,
+                right: 12,
+                color: "#b5c4cd",
+                "&:hover": { bgcolor: "#f5f8fa" },
               }}
             >
-              <IconButton
-                sx={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  color: "#b5c4cd",
-                  "&:hover": { bgcolor: "#f5f8fa" },
-                }}
+              <MoreHorizIcon fontSize="small" />
+            </IconButton>
+
+            <CardContent sx={{ p: 3 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
               >
-                <MoreHorizIcon fontSize="small" />
-              </IconButton>
-              <CardContent sx={{ pt: 3, pb: 3, px: 3 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5 }}>
-                  <Box
-                    sx={{
-                      bgcolor: card.iconBg,
-                      borderRadius: "10px",
-                      width: 44,
-                      height: 44,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {React.cloneElement(card.icon, {
-                      sx: { color: card.iconColor, fontSize: 24 },
-                    })}
-                  </Box>
-                  <Typography
-                    sx={{
-                      color: "#22394C",
-                      fontSize: "16px",
-                      fontWeight: 700,
-                      fontFamily: "Lufga",
-                    }}
-                  >
-                    {card.title}
-                  </Typography>
+                <Box
+                  sx={{
+                    bgcolor: card.iconBg,
+                    borderRadius: "10px",
+                    width: 44,
+                    height: 44,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {React.cloneElement(card.icon, {
+                    sx: { color: card.iconColor, fontSize: 24 },
+                  })}
                 </Box>
                 <Typography
                   sx={{
                     color: "#22394C",
-                    fontWeight: 600,
-                    fontSize: "44px",
-                    fontFamily: "Lufga",
-                    lineHeight: 1,
-                  }}
-                >
-                  {card.value}
-                </Typography>
-                <Typography
-                  sx={{
-                    color: "#22394C",
-                    fontSize: "14px",
-                    mt: 1,
+                    fontSize: "16px",
+                    fontWeight: 700,
                     fontFamily: "Lufga",
                   }}
                 >
-                  {card.subtitle}
+                  {card.title}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+              </Box>
+
+              <Typography
+                sx={{
+                  color: "#22394C",
+                  fontWeight: 600,
+                  fontSize: "44px",
+                  fontFamily: "Lufga",
+                  lineHeight: 1,
+                }}
+              >
+                {card.value}
+              </Typography>
+              <Typography
+                sx={{
+                  color: "#22394C",
+                  fontSize: "14px",
+                  mt: 1,
+                  fontFamily: "Lufga",
+                }}
+              >
+                {card.subtitle}
+              </Typography>
+            </CardContent>
+          </Card>
         ))}
-      </Grid>
+      </Box>
 
       {/* Recent Company Progress Table */}
       <Card

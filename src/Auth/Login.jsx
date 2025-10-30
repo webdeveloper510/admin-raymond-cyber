@@ -106,7 +106,7 @@ const Login = () => {
             fontSize: "40px",
             marginTop: "20px",
             fontWeight: "700",
-            fontFamily: "gilroy",
+            fontFamily: "Poppins",
           }}
         >
           Sign In
@@ -117,7 +117,7 @@ const Login = () => {
             <Typography
               variant="caption"
               sx={{
-                fontFamily: "gilroy",
+                // fontFamily: "Poppins",
                 fontWeight: 700,
                 fontSize: "15px",
                 color: "#014260",
@@ -147,7 +147,7 @@ const Login = () => {
             <Typography
               variant="caption"
               sx={{
-                fontFamily: "gilroy",
+                fontFamily: "Poppins",
                 fontWeight: 700,
                 fontSize: "15px",
                 color: "#014260",
@@ -196,7 +196,7 @@ const Login = () => {
                 textTransform: "none",
                 fontSize: "16px",
                 fontWeight: 600,
-                fontFamily: "gilroy",
+                fontFamily: "Poppins",
                 height: "50px",
                 borderRadius: "10px",
                 bgcolor: "#1361A3",
@@ -216,7 +216,7 @@ const Login = () => {
                 textTransform: "none",
                 fontSize: "16px",
                 fontWeight: 600,
-                fontFamily: "gilroy",
+                fontFamily: "Poppins",
                 color: "#669DB1",
                 height: "50px",
                 borderRadius: "10px",
