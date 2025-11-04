@@ -294,5 +294,220 @@ export const rejectCompany = async (email) => {
     );
   }
 };
+export const addVideo = async (videoData) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const formData = new FormData();
+
+    formData.append("course_id", videoData.course_id);
+    formData.append("title", videoData.title);
+    formData.append("description", videoData.description || "");
+    formData.append("video", videoData.videoFile);
+
+    const response = await api.post("/upload-video/", formData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Add Video API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while uploading video.",
+      }
+    );
+  }
+};
+
+export const getVideoList = async () => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const response = await api.get("/upload-video/", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Get Video List API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while fetching video list.",
+      }
+    );
+  }
+};
+
+export const deleteVideo = async (payload) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const response = await api.delete(`/upload-video/`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      data: payload,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Delete Video API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while deleting video.",
+      }
+    );
+  }
+};
+export const createQuestion = async (questionData) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+
+    const response = await api.post("/question-create/", questionData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Create Question API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while creating question.",
+      }
+    );
+  }
+};
+export const addCourse = async (courseData) => {
+  try {
+    const accessToken = localStorage.getItem("access_token"); 
+    
+    const response = await api.post("/create-course/", courseData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error adding course:", error);
+    return {
+      code: "500",
+      message: error.response?.data?.message || "Failed to add course"
+    };
+  }
+};
+export const editCourse = async (courseId, courseData) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+
+    const response = await api.put(`/course/${courseId}/`, courseData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error editing course:", error);
+    return {
+      code: "500",
+      message: error.response?.data?.message || "Failed to update course",
+    };
+  }
+};
+export const deleteCourse = async (courseId) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+
+    const response = await api.delete(`/course/${courseId}/`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    return {
+      code: "500",
+      message: error.response?.data?.message || "Failed to delete course",
+    };
+  }
+};
+
+export const getCourseList = async () => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const response = await api.get("/course-list/", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching courses:", error);
+    return {
+      code: "500",
+      message: error.response?.data?.message || "Failed to fetch courses",
+      data: { courses: [] }
+    };
+  }
+};
+
+export const getCompanyEmployeeList = async () => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const response = await api.get("/superadmin/company_employee_list/", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Get Video List API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while fetching video list.",
+      }
+    );
+  }
+};
+export const getUserAnswers = async (userId) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+
+    const response = await api.get(
+      `/superadmin/user/answers/${userId}/`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Get User Answers API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while fetching user answers.",
+      }
+    );
+  }
+};
+export const uploadCertificate = async (formData) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+
+    const response = await api.post("/superadmin/certificates/", formData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Upload Certificate API Error:", error);
+    return (
+      error.response?.data || {
+        message: "Something went wrong while uploading certificate.",
+      }
+    );
+  }
+};
 
 export default api;

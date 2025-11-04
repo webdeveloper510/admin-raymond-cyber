@@ -1,0 +1,801 @@
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Avatar,
+  Collapse,
+  Divider,
+} from "@mui/material";
+import {
+  Assessment as AssessmentIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Close as CloseIcon,
+  Business as BusinessIcon,
+  Person as PersonIcon,
+  CloudUpload as CloudUploadIcon,
+  Download as DownloadIcon,
+} from "@mui/icons-material";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import {
+  getCompanyEmployeeList,
+  getUserAnswers,
+  uploadCertificate,
+} from "../Api/api";
+
+const TestResultsManagement = () => {
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [loadingAnswers, setLoadingAnswers] = useState(false);
+  const [openAnswersDialog, setOpenAnswersDialog] = useState(false);
+  const [openCertificateDialog, setOpenCertificateDialog] = useState(false);
+  const [uploadingCertificate, setUploadingCertificate] = useState(false);
+  const [certificateFile, setCertificateFile] = useState(null);
+  const [certificateFileName, setCertificateFileName] = useState("");
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const response = await getCompanyEmployeeList();
+
+      if (response.code === "200") {
+        setCompanies(response.data || []);
+      } else {
+        toast.error(response.message || "Failed to fetch companies");
+        setCompanies([]);
+      }
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      toast.error("Failed to load companies");
+      setCompanies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserAnswers = async (userId) => {
+    setLoadingAnswers(true);
+    try {
+      const response = await getUserAnswers(userId);
+
+      if (response.code === "200") {
+        setUserAnswers(response.data || []);
+      } else {
+        toast.error(response.message || "Failed to fetch user answers");
+        setUserAnswers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching user answers:", error);
+      toast.error("Failed to load user answers");
+      setUserAnswers([]);
+    } finally {
+      setLoadingAnswers(false);
+    }
+  };
+
+  const handleViewAnswers = async (company) => {
+    setSelectedUser({
+      id: company.id,
+      first_name: company.first_name || "",
+      last_name: company.last_name || "",
+      email: company.email,
+      company_name: company.company_name,
+      course_id: company.course_id,
+    });
+    setOpenAnswersDialog(true);
+    await fetchUserAnswers(company.id);
+  };
+
+  const handleCloseAnswersDialog = () => {
+    setOpenAnswersDialog(false);
+    setSelectedUser(null);
+    setUserAnswers([]);
+  };
+
+  const handleOpenCertificateDialog = (company) => {
+    setSelectedUser({
+      id: company.id,
+      first_name: company.first_name || "",
+      last_name: company.last_name || "",
+      email: company.email,
+      company_name: company.company_name,
+       course_id: company.course_id,
+    });
+    setOpenCertificateDialog(true);
+  };
+
+  const handleCloseCertificateDialog = () => {
+    setOpenCertificateDialog(false);
+    setSelectedUser(null);
+    setCertificateFile(null);
+    setCertificateFileName("");
+  };
+
+  const handleCertificateUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Please select a PDF file");
+        return;
+      }
+
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast.error("File size should not exceed 10MB");
+        return;
+      }
+
+      setCertificateFile(file);
+      setCertificateFileName(file.name);
+    }
+  };
+
+  const handleUploadCertificate = async () => {
+    if (!certificateFile) {
+      toast.error("Please select a PDF file");
+      return;
+    }
+
+    if (!selectedUser) {
+      toast.error("User not selected");
+      return;
+    }
+
+    setUploadingCertificate(true);
+    try {
+      const formData = new FormData();
+      formData.append("pdf_file", certificateFile);
+      formData.append("user", selectedUser.id);
+      formData.append("course", selectedUser.course_id); 
+
+      const response = await uploadCertificate(formData);
+
+      if (response.code === "200") {
+        toast.success(response.message || "Certificate uploaded successfully!");
+        handleCloseCertificateDialog();
+      } else {
+        toast.error(response.message || "Failed to upload certificate");
+      }
+    } catch (error) {
+      console.error("Error uploading certificate:", error);
+      toast.error("Failed to upload certificate");
+    } finally {
+      setUploadingCertificate(false);
+    }
+  };
+
+  const calculateScore = (answers) => {
+    if (!answers || answers.length === 0) return { correct: 0, total: 0, percentage: 0 };
+    const correct = answers.filter((ans) => ans.is_correct).length;
+    const total = answers.length;
+    const percentage = Math.round((correct / total) * 100);
+    return { correct, total, percentage };
+  };
+
+  const getTotalEmployees = () => {
+    return companies.reduce((total, company) => total + (company.no_of_employees || 0), 0);
+  };
+
+  return (
+    <Box sx={{ bgcolor: "#f5f7fa", minHeight: "100vh", p: 3 }}>
+      <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Box
+              sx={{
+                bgcolor: "#5B9FBD",
+                borderRadius: "8px",
+                width: 40,
+                height: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <AssessmentIcon sx={{ color: "#fff", fontSize: 24 }} />
+            </Box>
+            <Box>
+              <Typography
+                sx={{
+                  color: "#1a3a4a",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                }}
+              >
+                Test Results Management
+              </Typography>
+              <Typography
+                sx={{
+                  color: "#8b9ba5",
+                  fontSize: "13px",
+                }}
+              >
+                View and manage employee test submissions
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Companies List */}
+      <Box sx={{ mb: 2 }}>
+        <Typography
+          sx={{ fontWeight: 600, color: "#1a3a4a", fontSize: "16px", mb: 2 }}
+        >
+          Companies & Employee Test Results
+        </Typography>
+
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+            <CircularProgress sx={{ color: "#5B9FBD" }} />
+          </Box>
+        ) : companies.length === 0 ? (
+          <Card
+            sx={{
+              p: 4,
+              textAlign: "center",
+              borderRadius: "12px",
+              border: "1px solid #e8eef2",
+              boxShadow: "none",
+            }}
+          >
+            <BusinessIcon sx={{ fontSize: 64, color: "#e8eef2", mb: 2 }} />
+            <Typography sx={{ color: "#8b9ba5", fontWeight: 600, mb: 1 }}>
+              No Companies Found
+            </Typography>
+            <Typography sx={{ color: "#8b9ba5", fontSize: "14px" }}>
+              No test submissions available yet
+            </Typography>
+          </Card>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {companies.map((company) => (
+              <Card
+                key={company.id}
+                sx={{
+                  borderRadius: "12px",
+                  border: "1px solid #e8eef2",
+                  boxShadow: "none",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 2.5,
+                    bgcolor: "#fff",
+                    display: "flex",
+                    flexDirection: { xs: "column", md: "row" },
+                    justifyContent: "space-between",
+                    alignItems: { xs: "flex-start", md: "center" },
+                    gap: 2,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: "#5B9FBD",
+                        width: 48,
+                        height: 48,
+                      }}
+                    >
+                      <BusinessIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography
+  sx={{
+    color: "#1a3a4a",
+    fontWeight: 700,
+    fontSize: "16px",
+  }}
+>
+  {[
+    company?.company_name,
+    [company?.first_name, company?.last_name].filter(Boolean).join(" ")
+  ]
+    .filter(Boolean)
+    .join(" || ")}
+</Typography>
+
+
+                      <Typography
+                        sx={{
+                          color: "#8b9ba5",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {company.email} 
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box 
+                    sx={{ 
+                      display: "flex", 
+                      gap: 2,
+                      flexDirection: { xs: "column", sm: "row" },
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    <Button
+                      variant="contained"
+                      startIcon={<AssessmentIcon />}
+                      onClick={() => handleViewAnswers(company)}
+                      fullWidth
+                      sx={{
+                        bgcolor: "#5B9FBD",
+                        textTransform: "none",
+                        fontWeight: 600,
+                        borderRadius: "8px",
+                        border: "none",
+                        "&:hover": {
+                          bgcolor: "#4a8a9f",
+                        },
+                      }}
+                    >
+                      View Test Results
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<CloudUploadIcon />}
+                      onClick={() => handleOpenCertificateDialog(company)}
+                      fullWidth
+                      sx={{
+                        bgcolor: "#9C27B0",
+                        textTransform: "none",
+                        fontWeight: 600,
+                        borderRadius: "8px",
+                        border: "none",
+                        "&:hover": {
+                          bgcolor: "#7B1FA2",
+                        },
+                      }}
+                    >
+                      Upload Certificate
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* View Answers Dialog */}
+      <Dialog
+        open={openAnswersDialog}
+        onClose={handleCloseAnswersDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "12px" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            color: "#1a3a4a",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid #e8eef2",
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontWeight: 700, fontSize: "18px" }}>
+              Test Results: {selectedUser?.first_name} {selectedUser?.last_name}
+            </Typography>
+            <Typography sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}>
+              {selectedUser?.company_name} • {selectedUser?.email}
+            </Typography>
+          </Box>
+          <IconButton onClick={handleCloseAnswersDialog} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 3 }}>
+          {loadingAnswers ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 5,
+              }}
+            >
+              <CircularProgress sx={{ color: "#5B9FBD" }} />
+            </Box>
+          ) : userAnswers.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 5 }}>
+              <AssessmentIcon sx={{ fontSize: 64, color: "#e8eef2", mb: 2 }} />
+              <Typography sx={{ color: "#8b9ba5", fontWeight: 600 }}>
+                No test results found
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              {/* Score Summary */}
+              <Card
+                sx={{
+                  mb: 3,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fbfd",
+                  border: "1px solid #e8eef2",
+                  boxShadow: "none",
+                }}
+              >
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: { xs: "column", sm: "row" },
+                      justifyContent: "space-around",
+                      alignItems: "center",
+                      gap: 2,
+                    }}
+                  >
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography
+                        sx={{
+                          fontSize: "32px",
+                          fontWeight: 700,
+                          color: "#4CAF50",
+                        }}
+                      >
+                        {calculateScore(userAnswers).correct}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
+                      >
+                        Correct Answers
+                      </Typography>
+                    </Box>
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography
+                        sx={{
+                          fontSize: "32px",
+                          fontWeight: 700,
+                          color: "#f44336",
+                        }}
+                      >
+                        {calculateScore(userAnswers).total -
+                          calculateScore(userAnswers).correct}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
+                      >
+                        Wrong Answers
+                      </Typography>
+                    </Box>
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography
+                        sx={{
+                          fontSize: "32px",
+                          fontWeight: 700,
+                          color: "#5B9FBD",
+                        }}
+                      >
+                        {calculateScore(userAnswers).percentage}%
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
+                      >
+                        Score
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Questions and Answers */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {userAnswers.map((answer, index) => (
+                  <Card
+                    key={index}
+                    sx={{
+                      borderRadius: "12px",
+                      border: answer.is_correct
+                        ? "2px solid #4CAF50"
+                        : "2px solid #f44336",
+                      boxShadow: "none",
+                      bgcolor: answer.is_correct ? "#f1f8f4" : "#fef5f5",
+                    }}
+                  >
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "start",
+                          gap: 2,
+                          mb: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            bgcolor: answer.is_correct
+                              ? "#4CAF50"
+                              : "#f44336",
+                            borderRadius: "50%",
+                            width: 24,
+                            height: 24,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            mt: 0.5,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "#fff",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {index + 1}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            sx={{
+                              color: "#1a3a4a",
+                              fontWeight: 600,
+                              fontSize: "14px",
+                              mb: 1.5,
+                            }}
+                          >
+                            {answer.question}
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              mb: 1,
+                            }}
+                          >
+                            {answer.is_correct ? (
+                              <CheckCircleIcon
+                                sx={{ color: "#4CAF50", fontSize: 20 }}
+                              />
+                            ) : (
+                              <CancelIcon
+                                sx={{ color: "#f44336", fontSize: 20 }}
+                              />
+                            )}
+                            <Typography
+                              sx={{
+                                fontSize: "13px",
+                                color: "#1a3a4a",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {answer.answer_text}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={answer.is_correct ? "Correct" : "Wrong"}
+                            size="small"
+                            sx={{
+                              bgcolor: answer.is_correct
+                                ? "#4CAF50"
+                                : "#f44336",
+                              color: "#fff",
+                              fontWeight: 600,
+                              fontSize: "11px",
+                              height: "24px",
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 2, borderTop: "1px solid #e8eef2" }}>
+          <Button
+            onClick={handleCloseAnswersDialog}
+            variant="contained"
+            sx={{
+              bgcolor: "#5B9FBD",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 3,
+              border: "none",
+              "&:hover": {
+                bgcolor: "#4a8a9f",
+              },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Certificate Dialog */}
+      <Dialog
+        open={openCertificateDialog}
+        onClose={handleCloseCertificateDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "12px" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            color: "#1a3a4a",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid #e8eef2",
+          }}
+        >
+          Upload Certificate
+          <IconButton onClick={handleCloseCertificateDialog} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ mb: 2 }}>
+        
+            <Typography sx={{ fontSize: "16px", color: "#1a3a4a", fontWeight: 600 }}>
+              {selectedUser?.first_name} {selectedUser?.last_name}
+            </Typography>
+            <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
+              {selectedUser?.company_name} • {selectedUser?.email}
+            </Typography>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box>
+            <input
+              accept="application/pdf"
+              style={{ display: "none" }}
+              id="certificate-upload"
+              type="file"
+              onChange={handleCertificateUpload}
+            />
+            <label htmlFor="certificate-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<CloudUploadIcon />}
+                fullWidth
+                sx={{
+                  borderColor: "#5B9FBD",
+                  color: "#5B9FBD",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  py: 1.5,
+                  borderRadius: "8px",
+                  "&:hover": {
+                    borderColor: "#4a8a9f",
+                    bgcolor: "#f8fbfd",
+                  },
+                }}
+              >
+                {certificateFileName || "Select PDF Certificate"}
+              </Button>
+            </label>
+            {certificateFileName && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: "#f8fbfd",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <DownloadIcon sx={{ color: "#5B9FBD", fontSize: 20 }} />
+                <Typography sx={{ fontSize: "13px", color: "#1a3a4a", flex: 1 }}>
+                  {certificateFileName}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setCertificateFile(null);
+                    setCertificateFileName("");
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 2, borderTop: "1px solid #e8eef2" }}>
+          <Button
+            onClick={handleCloseCertificateDialog}
+            sx={{ 
+              textTransform: "none", 
+              color: "#8b9ba5",
+              "&:hover": {
+                bgcolor: "#f5f7fa",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUploadCertificate}
+            variant="contained"
+            disabled={uploadingCertificate || !certificateFile}
+            sx={{
+              bgcolor: "#9C27B0",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 3,
+              border: "none",
+              "&:hover": {
+                bgcolor: "#7B1FA2",
+              },
+              "&:disabled": {
+                bgcolor: "#e8eef2",
+                color: "#8b9ba5",
+              },
+            }}
+          >
+            {uploadingCertificate ? (
+              <CircularProgress size={20} sx={{ color: "#fff" }} />
+            ) : (
+              "Upload Certificate"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default TestResultsManagement;
