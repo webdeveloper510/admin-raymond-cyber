@@ -259,7 +259,7 @@ const VideoManagement = () => {
       const response = await deleteCourse(courseToDelete.id);
 
       if (response.code === "200") {
-        toast.success("Course deleted successfully!");
+        toast.success("Training Module deleted successfully!");
         setCourses(courses.filter((course) => course.id !== courseToDelete.id));
 
         if (selectedCourse?.id === courseToDelete.id) {
@@ -571,7 +571,7 @@ const VideoManagement = () => {
     }
 
     if (!selectedCourse) {
-      toast.error("Please select a course first");
+      toast.error("Please select a Training Module first");
       return;
     }
 
@@ -1061,7 +1061,7 @@ const VideoManagement = () => {
                           },
                         }}
                       >
-                        View 
+                        View Questions
                       </Button>
                     </Box>
                   </CardContent>
@@ -1102,7 +1102,7 @@ const VideoManagement = () => {
                 sx={{ fontSize: 64, color: "#e8eef2", mb: 2 }}
               />
               <Typography sx={{ color: "#8b9ba5", mb: 2 }}>
-                No videos in this course yet. Click "Add Video" to upload your
+                No videos in this Training Module yet. Click "Add Video" to upload your
                 first video.
               </Typography>
               <Button
@@ -1313,14 +1313,14 @@ const VideoManagement = () => {
           sx={{ fontSize: "14px", gap: 1 }}
         >
           <EditIcon fontSize="small" sx={{ color: "#5B9FBD" }} />
-          Edit Course
+          Edit Training Module
         </MenuItem>
         <MenuItem
           onClick={() => handleDeleteCourse(selectedCourseForMenu)}
           sx={{ fontSize: "14px", gap: 1, color: "#d32f2f" }}
         >
           <DeleteIcon fontSize="small" />
-          Delete Course
+          Delete Training Module
         </MenuItem>
       </Menu>
 
@@ -1427,7 +1427,7 @@ const VideoManagement = () => {
           ) : questionsList.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
               <Typography sx={{ color: "#8b9ba5", mb: 2 }}>
-                No questions available for this course.
+                No questions available for this Training Module.
               </Typography>
             </Box>
           ) : (
@@ -1734,7 +1734,7 @@ const VideoManagement = () => {
                         color: "#1a3a4a",
                       }}
                     >
-                      Mark course video upload as completed
+                      Mark Training Module video upload as completed
                     </Typography>
                     <Typography
                       sx={{ fontSize: "11px", color: "#8b9ba5", mt: 0.5 }}
