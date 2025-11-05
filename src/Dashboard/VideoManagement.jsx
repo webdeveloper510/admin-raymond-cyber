@@ -41,7 +41,8 @@ import {
   getCourseList,
   addCourse,
   editCourse,
-  deleteCourse
+  deleteCourse,
+  getCompletedVideoQuestions,
 } from "../Api/api";
 
 const VideoManagement = () => {
@@ -85,12 +86,19 @@ const VideoManagement = () => {
       { text: "", is_correct: false },
     ],
   });
+  // Question List States
+  const [openQuestionListDialog, setOpenQuestionListDialog] = useState(false);
+  const [questionsList, setQuestionsList] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [selectedCourseForQuestionList, setSelectedCourseForQuestionList] =
+    useState(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     videoFile: null,
     videoFileName: "",
+    is_course_video_upload_completed: false,
   });
 
   useEffect(() => {
@@ -129,7 +137,36 @@ const VideoManagement = () => {
       setLoadingCourses(false);
     }
   };
+  const handleOpenQuestionListDialog = async (course) => {
+    setSelectedCourseForQuestionList(course);
+    setOpenQuestionListDialog(true);
+    fetchQuestionsList(course.id);
+  };
 
+  const handleCloseQuestionListDialog = () => {
+    setOpenQuestionListDialog(false);
+    setSelectedCourseForQuestionList(null);
+    setQuestionsList([]);
+  };
+
+  const fetchQuestionsList = async (courseId) => {
+    setLoadingQuestions(true);
+    try {
+      const response = await getCompletedVideoQuestions(courseId);
+      if (response.code === "200") {
+        setQuestionsList(response.data || []);
+      } else {
+        toast.error(response.message || "Failed to fetch questions");
+        setQuestionsList([]);
+      }
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      toast.error("Failed to load questions");
+      setQuestionsList([]);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
   const handleOpenCourseDialog = (course = null) => {
     if (course) {
       setEditCourseMode(true);
@@ -494,6 +531,7 @@ const VideoManagement = () => {
       description: "",
       videoFile: null,
       videoFileName: "",
+      is_course_video_upload_completed: false,
     });
   };
 
@@ -546,6 +584,8 @@ const VideoManagement = () => {
         title: formData.title,
         description: formData.description,
         videoFile: formData.videoFile,
+        is_course_video_upload_completed:
+          formData.is_course_video_upload_completed ? 1 : 0,
       };
       console.log("🚀 ~ handleAddVideo ~ videoData:", videoData);
 
@@ -575,7 +615,6 @@ const VideoManagement = () => {
       setUploading(false);
     }
   };
-
   const handleDeleteVideo = async (videoId) => {
     setVideoToDelete(videoId);
     setOpenDeleteDialog(true);
@@ -614,9 +653,9 @@ const VideoManagement = () => {
 
   const statsCards = [
     {
-      title: "Total Courses",
+      title: "Total Training Modules",
       value: courses.length.toString(),
-      subtitle: "Active courses",
+      subtitle: "Active Training Modules",
       icon: <SchoolIcon />,
       iconBg: "#E8F4F8",
       iconColor: "#5B9FBD",
@@ -624,17 +663,17 @@ const VideoManagement = () => {
     {
       title: "Total Videos",
       value: getTotalVideos().toString(),
-      subtitle: "All courses combined",
+      subtitle: "All Training Modules combined",
       icon: <VideoLibraryIcon />,
       iconBg: "#FFF4E6",
       iconColor: "#FF9800",
     },
     {
-      title: "Course Videos",
+      title: "Training Module Videos",
       value: videos.length.toString(),
       subtitle: selectedCourse
         ? `In ${selectedCourse.course_name}`
-        : "Select a course",
+        : "Select a Training Module",
       icon: <PlayCircleIcon />,
       iconBg: "#F3E8FF",
       iconColor: "#9C27B0",
@@ -676,7 +715,7 @@ const VideoManagement = () => {
                   fontSize: "20px",
                 }}
               >
-                Course & Video Management
+                Module & Video Management
               </Typography>
               <Typography
                 sx={{
@@ -684,7 +723,7 @@ const VideoManagement = () => {
                   fontSize: "13px",
                 }}
               >
-                Manage courses and training videos
+                Manage training module and training videos
               </Typography>
             </Box>
           </Box>
@@ -706,7 +745,7 @@ const VideoManagement = () => {
                 },
               }}
             >
-              Add Course
+              Add Training Module
             </Button>
             <Button
               variant="contained"
@@ -775,7 +814,7 @@ const VideoManagement = () => {
                     sx={{
                       fontSize: "13px",
                       color: "#22394C",
-                      width:"200px",
+                      width: "200px",
                       fontWeight: 600,
                     }}
                   >
@@ -812,7 +851,7 @@ const VideoManagement = () => {
         <Typography
           sx={{ fontWeight: 600, color: "#1a3a4a", fontSize: "16px", mb: 2 }}
         >
-          Select Course
+          Select Training Module
         </Typography>
 
         {loadingCourses ? (
@@ -832,10 +871,10 @@ const VideoManagement = () => {
           >
             <SchoolIcon sx={{ fontSize: 48, color: "#f57f17", mb: 1 }} />
             <Typography sx={{ color: "#f57f17", fontWeight: 600, mb: 1 }}>
-              No Courses Available
+              No Training Modules Available
             </Typography>
             <Typography sx={{ color: "#8b9ba5", fontSize: "14px", mb: 2 }}>
-              Create your first course to start adding videos
+              Create your first Training Module to start adding videos
             </Typography>
             <Button
               variant="contained"
@@ -851,7 +890,7 @@ const VideoManagement = () => {
                 },
               }}
             >
-              Create Course
+              Create Training Module
             </Button>
           </Card>
         ) : (
@@ -937,22 +976,6 @@ const VideoManagement = () => {
                       {course.course_name}
                     </Typography>
 
-                    <Typography
-                      sx={{
-                        color: "#8b9ba5",
-                        fontSize: "12px",
-                        mb: 1.5,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        minHeight: "36px",
-                      }}
-                    >
-                      {course.description || "No description"}
-                    </Typography>
-
                     <Box
                       sx={{
                         display: "flex",
@@ -989,28 +1012,58 @@ const VideoManagement = () => {
                       </Typography>
                     )}
 
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenQuestionDialog(course);
-                      }}
-                      sx={{
-                        textTransform: "none",
-                        color: "#5B9FBD",
-                        borderColor: "#5B9FBD",
-                        fontSize: "11px",
-                        borderRadius: "6px",
-                        "&:hover": {
-                          borderColor: "#4a8a9f",
-                          bgcolor: "#f8fbfd",
-                        },
-                      }}
-                    >
-                      Add Question
-                    </Button>
+                    <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenQuestionDialog(course);
+                        }}
+                        sx={{
+                          textTransform: "none",
+                          color: "#5B9FBD",
+                          borderColor: "#5B9FBD",
+                          fontSize: "11px",
+                          borderRadius: "6px",
+                          "&:hover": {
+                            borderColor: "#4a8a9f",
+                            bgcolor: "#f8fbfd",
+                          },
+                        }}
+                      >
+                        Add Question
+                      </Button>
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenQuestionListDialog(course);
+                        }}
+                        disabled={course.question_count === 0}
+                        sx={{
+                          textTransform: "none",
+                          color: "#5B9FBD",
+                          borderColor: "#5B9FBD",
+                          fontSize: "11px",
+                          borderRadius: "6px",
+                          "&:hover": {
+                            borderColor: "#4a8a9f",
+                            bgcolor: "#f8fbfd",
+                          },
+                          "&:disabled": {
+                            borderColor: "#e8eef2",
+                            color: "#bdbdbd",
+                          },
+                        }}
+                      >
+                        View 
+                      </Button>
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -1290,7 +1343,7 @@ const VideoManagement = () => {
             alignItems: "center",
           }}
         >
-          {editCourseMode ? "Edit Course" : "Add New Course"}
+          {editCourseMode ? "Edit Training Module" : "Add Training Module"}
           <IconButton onClick={handleCloseCourseDialog} size="small">
             <CloseIcon />
           </IconButton>
@@ -1298,7 +1351,7 @@ const VideoManagement = () => {
         <DialogContent sx={{ pt: 2 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
             <TextField
-              label="Course Name"
+              label=" Name"
               name="course_name"
               value={courseFormData.course_name}
               onChange={handleCourseInputChange}
@@ -1306,17 +1359,6 @@ const VideoManagement = () => {
               required
               variant="outlined"
               autoFocus
-            />
-            <TextField
-              label="Course Description"
-              name="description"
-              value={courseFormData.description}
-              onChange={handleCourseInputChange}
-              fullWidth
-              multiline
-              rows={4}
-              variant="outlined"
-              placeholder="Enter a brief description of the course..."
             />
           </Box>
         </DialogContent>
@@ -1345,14 +1387,140 @@ const VideoManagement = () => {
             {savingCourse ? (
               <CircularProgress size={20} sx={{ color: "#fff" }} />
             ) : editCourseMode ? (
-              "Update Course"
+              "Update Training Module"
             ) : (
-              "Add Course"
+              "Add Training Module"
             )}
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Question List Dialog */}
+      <Dialog
+        open={openQuestionListDialog}
+        onClose={handleCloseQuestionListDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "12px" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            color: "#1a3a4a",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          Questions for: {selectedCourseForQuestionList?.course_name}
+          <IconButton onClick={handleCloseQuestionListDialog} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
+        <DialogContent sx={{ pt: 2 }}>
+          {loadingQuestions ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={32} sx={{ color: "#5B9FBD" }} />
+            </Box>
+          ) : questionsList.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 4 }}>
+              <Typography sx={{ color: "#8b9ba5", mb: 2 }}>
+                No questions available for this course.
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {questionsList.map((question, index) => (
+                <Card
+                  key={question.id}
+                  sx={{
+                    p: 2,
+                    border: "1px solid #e8eef2",
+                    borderRadius: "8px",
+                    boxShadow: "none",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: "#1a3a4a",
+                      fontSize: "14px",
+                      mb: 1.5,
+                    }}
+                  >
+                    Q{index + 1}. {question.text}
+                  </Typography>
+
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    {question.options?.map((option, optIndex) => (
+                      <Box
+                        key={option.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          p: 1,
+                          borderRadius: "6px",
+                          bgcolor: option.is_correct ? "#e8f5e9" : "#f5f5f5",
+                          border: option.is_correct
+                            ? "1px solid #4caf50"
+                            : "1px solid transparent",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "13px",
+                            color: option.is_correct ? "#2e7d32" : "#5f6368",
+                            fontWeight: option.is_correct ? 600 : 400,
+                          }}
+                        >
+                          {String.fromCharCode(65 + optIndex)}. {option.text}
+                        </Typography>
+                        {option.is_correct && (
+                          <Chip
+                            label="Correct"
+                            size="small"
+                            sx={{
+                              bgcolor: "#4caf50",
+                              color: "#fff",
+                              fontSize: "10px",
+                              height: "20px",
+                              ml: "auto",
+                            }}
+                          />
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button
+            onClick={handleCloseQuestionListDialog}
+            variant="contained"
+            sx={{
+              bgcolor: "#5B9FBD",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 3,
+              "&:hover": {
+                bgcolor: "#4a8a9f",
+              },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Delete Course Dialog */}
       <Dialog
         open={openDeleteCourseDialog}
@@ -1529,6 +1697,54 @@ const VideoManagement = () => {
                   Selected: {formData.videoFileName}
                 </Typography>
               )}
+            </Box>
+            <Box
+              sx={{
+                mt: 1,
+                p: 2,
+                bgcolor: "#f8fbfd",
+                borderRadius: "8px",
+                border: "1px solid #e8eef2",
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.is_course_video_upload_completed}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        is_course_video_upload_completed: e.target.checked,
+                      })
+                    }
+                    sx={{
+                      color: "#5B9FBD",
+                      "&.Mui-checked": {
+                        color: "#5B9FBD",
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#1a3a4a",
+                      }}
+                    >
+                      Mark course video upload as completed
+                    </Typography>
+                    <Typography
+                      sx={{ fontSize: "11px", color: "#8b9ba5", mt: 0.5 }}
+                    >
+                      Check this if you have finished uploading all videos for "
+                      {selectedCourse?.course_name}"
+                    </Typography>
+                  </Box>
+                }
+              />
             </Box>
           </Box>
         </DialogContent>

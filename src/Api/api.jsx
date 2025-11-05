@@ -89,9 +89,9 @@ export const verifySubscription = async (email, subscriptionId) => {
       email: email,
       subscription_id: subscriptionId,
     };
-    
+
     const response = await api.post("/subscription/", payload);
-    
+
     return response.data;
   } catch (error) {
     console.error("Verify Subscription API Error:", error);
@@ -230,16 +230,20 @@ export const updateProfile = async (profileData) => {
   }
 };
 
-// ✅ Update Employee API 
+// ✅ Update Employee API
 export const updateEmployee = async (employeeId, employeeData) => {
   try {
     const accessToken = localStorage.getItem("access_token");
 
-    const response = await api.post(`/update-employee/${employeeId}/`, employeeData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await api.post(
+      `/update-employee/${employeeId}/`,
+      employeeData,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     return response.data;
   } catch (error) {
@@ -275,7 +279,8 @@ export const rejectCompany = async (email) => {
   try {
     const accessToken = localStorage.getItem("access_token");
 
-    const response = await api.post("/superadmin/reject-company/", 
+    const response = await api.post(
+      "/superadmin/reject-company/",
       { email },
       {
         headers: {
@@ -303,7 +308,12 @@ export const addVideo = async (videoData) => {
     formData.append("title", videoData.title);
     formData.append("description", videoData.description || "");
     formData.append("video", videoData.videoFile);
-
+    formData.append(
+      "is_course_video_upload_completed",
+      videoData.is_course_video_upload_completed !== undefined 
+        ? videoData.is_course_video_upload_completed 
+        : 0
+    );
     const response = await api.post("/upload-video/", formData, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -321,7 +331,6 @@ export const addVideo = async (videoData) => {
     );
   }
 };
-
 export const getVideoList = async () => {
   try {
     const accessToken = localStorage.getItem("access_token");
@@ -378,8 +387,8 @@ export const createQuestion = async (questionData) => {
 };
 export const addCourse = async (courseData) => {
   try {
-    const accessToken = localStorage.getItem("access_token"); 
-    
+    const accessToken = localStorage.getItem("access_token");
+
     const response = await api.post("/create-course/", courseData, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -391,7 +400,7 @@ export const addCourse = async (courseData) => {
     console.error("Error adding course:", error);
     return {
       code: "500",
-      message: error.response?.data?.message || "Failed to add course"
+      message: error.response?.data?.message || "Failed to add course",
     };
   }
 };
@@ -446,7 +455,7 @@ export const getCourseList = async () => {
     return {
       code: "500",
       message: error.response?.data?.message || "Failed to fetch courses",
-      data: { courses: [] }
+      data: { courses: [] },
     };
   }
 };
@@ -471,12 +480,9 @@ export const getUserAnswers = async (userId) => {
   try {
     const accessToken = localStorage.getItem("access_token");
 
-    const response = await api.get(
-      `/superadmin/user/answers/${userId}/`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
+    const response = await api.get(`/superadmin/user/answers/${userId}/`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     return response.data;
   } catch (error) {
@@ -505,6 +511,26 @@ export const uploadCertificate = async (formData) => {
     return (
       error.response?.data || {
         message: "Something went wrong while uploading certificate.",
+      }
+    );
+  }
+};
+export const getCompletedVideoQuestions = async (courseId) => {
+  try {
+    const accessToken = localStorage.getItem("access_token");
+    const response = await api.get(
+      `/questions-completed-videos-list/?course_id=${courseId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Get Completed Video Questions API Error:", error);
+    return (
+      error.response?.data || {
+        message:
+          "Something went wrong while fetching completed video questions.",
       }
     );
   }
