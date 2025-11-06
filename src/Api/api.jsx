@@ -8,7 +8,20 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
-
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.data?.code === "token_not_valid" ||
+      error.response?.data?.detail === "Given token not valid for any token type"
+    ) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
 // ✅ Send OTP API
 export const sendOtp = async (data) => {
   try {

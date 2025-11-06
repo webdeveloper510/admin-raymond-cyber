@@ -339,7 +339,7 @@ const TestResultsManagement = () => {
                           fontSize: "13px",
                         }}
                       >
-                        {company.email} 
+  {company.email} • <strong style={{ color: "#5B9FBD", textTransform: "capitalize" }}>{company.type}</strong>
                       </Typography>
                     </Box>
                   </Box>
