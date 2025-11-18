@@ -55,10 +55,18 @@ const TestResultsManagement = () => {
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
   const [certificateFile, setCertificateFile] = useState(null);
   const [certificateFileName, setCertificateFileName] = useState("");
+  const [expandedQuestions, setExpandedQuestions] = useState({});
 
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  const toggleQuestion = (index) => {
+    setExpandedQuestions(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -117,6 +125,7 @@ const TestResultsManagement = () => {
     setOpenAnswersDialog(false);
     setSelectedUser(null);
     setUserAnswers([]);
+    setExpandedQuestions({});
   };
 
   const handleOpenCertificateDialog = (company) => {
@@ -126,7 +135,7 @@ const TestResultsManagement = () => {
       last_name: company.last_name || "",
       email: company.email,
       company_name: company.company_name,
-       course_id: company.course_id,
+      course_id: company.course_id,
     });
     setOpenCertificateDialog(true);
   };
@@ -173,7 +182,7 @@ const TestResultsManagement = () => {
       const formData = new FormData();
       formData.append("pdf_file", certificateFile);
       formData.append("user", selectedUser.id);
-      formData.append("course", selectedUser.course_id); 
+      formData.append("course", selectedUser.course_id);
 
       const response = await uploadCertificate(formData);
 
@@ -191,12 +200,45 @@ const TestResultsManagement = () => {
     }
   };
 
-  const calculateScore = (answers) => {
+  // Modified: Calculate overall score across ALL answers
+  const calculateOverallScore = (answers) => {
     if (!answers || answers.length === 0) return { correct: 0, total: 0, percentage: 0 };
-    const correct = answers.filter((ans) => ans.is_correct).length;
+    
+    // Count all correct answers regardless of course
+    const correct = answers.filter((ans) => ans.isCorrect === true).length;
     const total = answers.length;
-    const percentage = Math.round((correct / total) * 100);
+    const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+    
     return { correct, total, percentage };
+  };
+
+  // New: Get course breakdown for display
+  const getCourseBreakdown = (answers) => {
+    if (!answers || answers.length === 0) return [];
+    
+    const courseMap = new Map();
+    
+    answers.forEach(answer => {
+      const courseName = answer.course_name || "Unknown Course";
+      if (!courseMap.has(courseName)) {
+        courseMap.set(courseName, {
+          name: courseName,
+          correct: 0,
+          total: 0,
+        });
+      }
+      
+      const course = courseMap.get(courseName);
+      course.total++;
+      if (answer.isCorrect === true) {
+        course.correct++;
+      }
+    });
+    
+    return Array.from(courseMap.values()).map(course => ({
+      ...course,
+      percentage: Math.round((course.correct / course.total) * 100)
+    }));
   };
 
   const getTotalEmployees = () => {
@@ -318,28 +360,26 @@ const TestResultsManagement = () => {
                     </Avatar>
                     <Box>
                       <Typography
-  sx={{
-    color: "#1a3a4a",
-    fontWeight: 700,
-    fontSize: "16px",
-  }}
->
-  {[
-    company?.company_name,
-    [company?.first_name, company?.last_name].filter(Boolean).join(" ")
-  ]
-    .filter(Boolean)
-    .join(" || ")}
-</Typography>
-
-
+                        sx={{
+                          color: "#1a3a4a",
+                          fontWeight: 700,
+                          fontSize: "16px",
+                        }}
+                      >
+                        {[
+                          company?.company_name,
+                          [company?.first_name, company?.last_name].filter(Boolean).join(" ")
+                        ]
+                          .filter(Boolean)
+                          .join(" || ")}
+                      </Typography>
                       <Typography
                         sx={{
                           color: "#8b9ba5",
                           fontSize: "13px",
                         }}
                       >
-  {company.email} • <strong style={{ color: "#5B9FBD", textTransform: "capitalize" }}>{company.type}</strong>
+                        {company.email} • <strong style={{ color: "#5B9FBD", textTransform: "capitalize" }}>{company.type}</strong>
                       </Typography>
                     </Box>
                   </Box>
@@ -417,7 +457,7 @@ const TestResultsManagement = () => {
         >
           <Box>
             <Typography sx={{ fontWeight: 700, fontSize: "18px" }}>
-              Test Results: {selectedUser?.first_name} {selectedUser?.last_name}
+              Overall Test Results: {selectedUser?.first_name} {selectedUser?.last_name}
             </Typography>
             <Typography sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}>
               {selectedUser?.company_name} • {selectedUser?.email}
@@ -449,7 +489,7 @@ const TestResultsManagement = () => {
             </Box>
           ) : (
             <>
-              {/* Score Summary */}
+              {/* Overall Score Summary */}
               <Card
                 sx={{
                   mb: 3,
@@ -460,6 +500,17 @@ const TestResultsManagement = () => {
                 }}
               >
                 <CardContent>
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#1a3a4a",
+                      mb: 2,
+                      textAlign: "center",
+                    }}
+                  >
+                    Overall Performance Across All Courses
+                  </Typography>
                   <Box
                     sx={{
                       display: "flex",
@@ -477,7 +528,7 @@ const TestResultsManagement = () => {
                           color: "#4CAF50",
                         }}
                       >
-                        {calculateScore(userAnswers).correct}
+                        {calculateOverallScore(userAnswers).correct}
                       </Typography>
                       <Typography
                         sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
@@ -494,8 +545,8 @@ const TestResultsManagement = () => {
                           color: "#f44336",
                         }}
                       >
-                        {calculateScore(userAnswers).total -
-                          calculateScore(userAnswers).correct}
+                        {calculateOverallScore(userAnswers).total -
+                          calculateOverallScore(userAnswers).correct}
                       </Typography>
                       <Typography
                         sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
@@ -512,235 +563,350 @@ const TestResultsManagement = () => {
                           color: "#5B9FBD",
                         }}
                       >
-                        {calculateScore(userAnswers).percentage}%
+                        {calculateOverallScore(userAnswers).percentage}%
                       </Typography>
                       <Typography
                         sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
                       >
-                        Score
+                        Overall Score
+                      </Typography>
+                    </Box>
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography
+                        sx={{
+                          fontSize: "32px",
+                          fontWeight: 700,
+                          color: "#FF9800",
+                        }}
+                      >
+                        {calculateOverallScore(userAnswers).total}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}
+                      >
+                        Total Questions
                       </Typography>
                     </Box>
                   </Box>
                 </CardContent>
               </Card>
 
-           {/* Questions and Answers */}
-<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-  {userAnswers.map((answer, index) => {
-    const correctOption = answer.options?.find(opt => opt.is_correct === true);
-    
-    return (
-      <Card
-        key={index}
-        sx={{
-          borderRadius: "12px",
-          border: answer.isCorrect
-            ? "2px solid #4CAF50"
-            : "2px solid #f44336",
-          boxShadow: "none",
-          bgcolor: "#fff",
-        }}
-      >
-        <CardContent sx={{ p: 2.5 }}>
-          {/* Question Header */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "start",
-              gap: 2,
-              mb: 3,
-            }}
-          >
-            <Box
-              sx={{
-                bgcolor: answer.isCorrect ? "#4CAF50" : "#f44336",
-                borderRadius: "50%",
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: "#fff",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                }}
-              >
-                {index + 1}
-              </Typography>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                sx={{
-                  color: "#1a3a4a",
-                  fontWeight: 600,
-                  fontSize: "16px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {answer.question_text}
-              </Typography>
-            </Box>
-            <Chip
-              icon={answer.isCorrect ? <CheckCircleIcon /> : <CancelIcon />}
-              label={answer.isCorrect ? "Correct" : "Incorrect"}
-              size="small"
-              sx={{
-                bgcolor: answer.isCorrect ? "#E8F5E9" : "#FFEBEE",
-                color: answer.isCorrect ? "#4CAF50" : "#f44336",
-                fontWeight: 700,
-                fontSize: "12px",
-                border: `1px solid ${answer.isCorrect ? "#4CAF50" : "#f44336"}`,
-              }}
-            />
-          </Box>
-
-          {/* All Options */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            {answer.options?.map((option, optIdx) => {
-              const isUserAnswer = option.text === answer.userAnswer || 
-                                   option.text.trim() === answer.userAnswer?.trim();
-              const isCorrectAnswer = option.is_correct === true;
-
-              let borderColor = "#e0e0e0";
-              let bgcolor = "#fff";
-              let textColor = "#262A41";
-              let icon = null;
-              let fontWeight = 400;
-
-              if (isCorrectAnswer) {
-                borderColor = "#4CAF50";
-                bgcolor = "#E8F5E9";
-                textColor = "#2E7D32";
-                icon = "✓";
-                fontWeight = 600;
-              } else if (isUserAnswer && !answer.isCorrect) {
-                borderColor = "#f44336";
-                bgcolor = "#FFEBEE";
-                textColor = "#C62828";
-                icon = "✗";
-                fontWeight = 600;
-              }
-
-              return (
-                <Box
-                  key={optIdx}
+              {/* Course-wise Breakdown */}
+              {getCourseBreakdown(userAnswers).length > 1 && (
+                <Card
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    p: 2,
-                    borderRadius: "8px",
-                    border: `2px solid ${borderColor}`,
-                    bgcolor: bgcolor,
-                    transition: "all 0.2s ease",
+                    mb: 3,
+                    borderRadius: "12px",
+                    bgcolor: "#fff",
+                    border: "1px solid #e8eef2",
+                    boxShadow: "none",
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      bgcolor: isCorrectAnswer
-                        ? "#4CAF50"
-                        : isUserAnswer
-                        ? "#f44336"
-                        : "#E8F4F8",
-                      color: isCorrectAnswer || isUserAnswer ? "#fff" : "#5B9FBD",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 700,
-                      fontSize: "14px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {String.fromCharCode(65 + optIdx)}
-                  </Box>
-
-                  <Typography
-                    sx={{
-                      flex: 1,
-                      fontSize: "15px",
-                      fontWeight: fontWeight,
-                      color: textColor,
-                    }}
-                  >
-                    {option.text}
-                  </Typography>
-
-                  {icon && (
-                    <Box
+                  <CardContent>
+                    <Typography
                       sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        bgcolor: isCorrectAnswer ? "#4CAF50" : "#f44336",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        fontSize: "14px",
                         fontWeight: 700,
-                        fontSize: "16px",
+                        color: "#1a3a4a",
+                        mb: 2,
                       }}
                     >
-                      {icon}
+                      Course-wise Breakdown
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      {getCourseBreakdown(userAnswers).map((course, idx) => (
+                        <Box
+                          key={idx}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            p: 2,
+                            bgcolor: "#f8fbfd",
+                            borderRadius: "8px",
+                            border: "1px solid #e8eef2",
+                          }}
+                        >
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              sx={{
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                color: "#1a3a4a",
+                                mb: 0.5,
+                              }}
+                            >
+                              {course.name}
+                            </Typography>
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: "#8b9ba5",
+                              }}
+                            >
+                              {course.correct} / {course.total} correct
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={`${course.percentage}%`}
+                            sx={{
+                              bgcolor: course.percentage >= 70 ? "#E8F5E9" : course.percentage >= 50 ? "#FFF3E0" : "#FFEBEE",
+                              color: course.percentage >= 70 ? "#4CAF50" : course.percentage >= 50 ? "#FF9800" : "#f44336",
+                              fontWeight: 700,
+                              fontSize: "13px",
+                            }}
+                          />
+                        </Box>
+                      ))}
                     </Box>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
+                  </CardContent>
+                </Card>
+              )}
 
-          {/* Explanation Labels - Only show when answer is wrong */}
-          {!answer.isCorrect && (
-            <Box
-              sx={{
-                mt: 2,
-                pt: 2,
-                borderTop: "1px dashed #e0e0e0",
-                display: "flex",
-                gap: 3,
-                flexWrap: "wrap",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    bgcolor: "#f44336",
-                  }}
-                />
-                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
-                  Your Answer
-                </Typography>
+              {/* Questions and Answers */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {userAnswers.map((answer, index) => {
+                  const isExpanded = expandedQuestions[index] || false;
+                  
+                  return (
+                    <Card
+                      key={index}
+                      sx={{
+                        borderRadius: "12px",
+                        border: answer.isCorrect
+                          ? "2px solid #4CAF50"
+                          : "2px solid #f44336",
+                        boxShadow: "none",
+                        bgcolor: "#fff",
+                      }}
+                    >
+                      {/* Question Header - Always Visible */}
+                      <Box
+                        sx={{
+                          p: 2.5,
+                          cursor: "pointer",
+                          "&:hover": { bgcolor: "#f8fbfd" },
+                        }}
+                        onClick={() => toggleQuestion(index)}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "start",
+                            gap: 2,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              bgcolor: answer.isCorrect ? "#4CAF50" : "#f44336",
+                              borderRadius: "50%",
+                              width: 36,
+                              height: 36,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color: "#fff",
+                                fontSize: "16px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {index + 1}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                              <Chip
+                                label={answer.course_name}
+                                size="small"
+                                sx={{
+                                  bgcolor: "#E8F4F8",
+                                  color: "#5B9FBD",
+                                  fontWeight: 600,
+                                  fontSize: "11px",
+                                }}
+                              />
+                              <Chip
+                                icon={answer.isCorrect ? <CheckCircleIcon /> : <CancelIcon />}
+                                label={answer.isCorrect ? "Correct" : "Incorrect"}
+                                size="small"
+                                sx={{
+                                  bgcolor: answer.isCorrect ? "#E8F5E9" : "#FFEBEE",
+                                  color: answer.isCorrect ? "#4CAF50" : "#f44336",
+                                  fontWeight: 700,
+                                  fontSize: "12px",
+                                  border: `1px solid ${answer.isCorrect ? "#4CAF50" : "#f44336"}`,
+                                }}
+                              />
+                            </Box>
+                            <Typography
+                              sx={{
+                                color: "#1a3a4a",
+                                fontWeight: 600,
+                                fontSize: "16px",
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {answer.question_text}
+                            </Typography>
+                          </Box>
+                          <IconButton size="small">
+                            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          </IconButton>
+                        </Box>
+                      </Box>
+
+                      {/* Expandable Content */}
+                      <Collapse in={isExpanded}>
+                        <CardContent sx={{ pt: 0, pb: 2.5, px: 2.5 }}>
+                          {/* All Options */}
+                          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                            {answer.options?.map((option, optIdx) => {
+                              const isUserAnswer = option.text === answer.userAnswer || 
+                                                   option.text.trim() === answer.userAnswer?.trim();
+                              const isCorrectAnswer = option.is_correct === true;
+
+                              let borderColor = "#e0e0e0";
+                              let bgcolor = "#fff";
+                              let textColor = "#262A41";
+                              let icon = null;
+                              let fontWeight = 400;
+
+                              if (isCorrectAnswer) {
+                                borderColor = "#4CAF50";
+                                bgcolor = "#E8F5E9";
+                                textColor = "#2E7D32";
+                                icon = "✓";
+                                fontWeight = 600;
+                              } else if (isUserAnswer && !answer.isCorrect) {
+                                borderColor = "#f44336";
+                                bgcolor = "#FFEBEE";
+                                textColor = "#C62828";
+                                icon = "✗";
+                                fontWeight = 600;
+                              }
+
+                              return (
+                                <Box
+                                  key={optIdx}
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 2,
+                                    p: 2,
+                                    borderRadius: "8px",
+                                    border: `2px solid ${borderColor}`,
+                                    bgcolor: bgcolor,
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: "50%",
+                                      bgcolor: isCorrectAnswer
+                                        ? "#4CAF50"
+                                        : isUserAnswer
+                                        ? "#f44336"
+                                        : "#E8F4F8",
+                                      color: isCorrectAnswer || isUserAnswer ? "#fff" : "#5B9FBD",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontWeight: 700,
+                                      fontSize: "14px",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {String.fromCharCode(65 + optIdx)}
+                                  </Box>
+
+                                  <Typography
+                                    sx={{
+                                      flex: 1,
+                                      fontSize: "15px",
+                                      fontWeight: fontWeight,
+                                      color: textColor,
+                                    }}
+                                  >
+                                    {option.text}
+                                  </Typography>
+
+                                  {icon && (
+                                    <Box
+                                      sx={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: "50%",
+                                        bgcolor: isCorrectAnswer ? "#4CAF50" : "#f44336",
+                                        color: "#fff",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontWeight: 700,
+                                        fontSize: "16px",
+                                      }}
+                                    >
+                                      {icon}
+                                    </Box>
+                                  )}
+                                </Box>
+                              );
+                            })}
+                          </Box>
+
+                          {/* Explanation Labels - Only show when answer is wrong */}
+                          {!answer.isCorrect && (
+                            <Box
+                              sx={{
+                                mt: 2,
+                                pt: 2,
+                                borderTop: "1px dashed #e0e0e0",
+                                display: "flex",
+                                gap: 3,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <Box
+                                  sx={{
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: "50%",
+                                    bgcolor: "#f44336",
+                                  }}
+                                />
+                                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
+                                  Your Answer
+                                </Typography>
+                              </Box>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                <Box
+                                  sx={{
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: "50%",
+                                    bgcolor: "#4CAF50",
+                                  }}
+                                />
+                                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
+                                  Correct Answer
+                                </Typography>
+                              </Box>
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Collapse>
+                    </Card>
+                  );
+                })}
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    bgcolor: "#4CAF50",
-                  }}
-                />
-                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
-                  Correct Answer
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-    );
-  })}
-</Box>
             </>
           )}
         </DialogContent>
@@ -794,7 +960,6 @@ const TestResultsManagement = () => {
 
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2 }}>
-        
             <Typography sx={{ fontSize: "16px", color: "#1a3a4a", fontWeight: 600 }}>
               {selectedUser?.first_name} {selectedUser?.last_name}
             </Typography>

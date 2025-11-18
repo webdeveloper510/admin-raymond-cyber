@@ -53,8 +53,9 @@ const CompanyAdminRequests = () => {
     try {
       const response = await getRequestList();
       const users = response?.data?.users || [];
-      const formattedData = users.map((item) => ({
-        id: `REQ-${item.id}`,
+      const formattedData = users.map((item, index) => ({
+        id: item.id,
+        serialNo: index + 1,
         company: item.company_name,
         email: item.email,
         requestDate: item.created_at
@@ -215,7 +216,7 @@ const CompanyAdminRequests = () => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#F7FAFC" }}>
                     {[
-                      "Request ID",
+                      "S.No",
                       "Company Name",
                       "Email",
                       "Request date",
@@ -254,7 +255,7 @@ const CompanyAdminRequests = () => {
                           px: 3,
                         }}
                       >
-                        {row.id}
+                        {index + 1}
                       </TableCell>
                       <TableCell
                         sx={{

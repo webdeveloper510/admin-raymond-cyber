@@ -1532,12 +1532,12 @@ const VideoManagement = () => {
         }}
       >
         <DialogTitle sx={{ fontWeight: 700, color: "#1a3a4a" }}>
-          Delete Course
+          Delete Training Module
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: "#8b9ba5", fontSize: "14px" }}>
             Are you sure you want to delete "{courseToDelete?.course_name}"?
-            This will also delete all videos associated with this course. This
+            This will also delete all videos associated with this Training Module. This
             action cannot be undone.
           </Typography>
         </DialogContent>

@@ -380,7 +380,7 @@ const DashboardOverview = () => {
                         borderBottom: "1px solid #e8eef2",
                       }}
                     >
-                      <TableCell>{row.id}</TableCell>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell>{row.company}</TableCell>
                       <TableCell>{row.email}</TableCell>
                       <TableCell>{row.employees}</TableCell>
