@@ -42,6 +42,7 @@ import {
   getCompanyEmployeeList,
   getUserAnswers,
   uploadCertificate,
+  getUploadCertificate,
 } from "../Api/api";
 
 const TestResultsManagement = () => {
@@ -56,15 +57,16 @@ const TestResultsManagement = () => {
   const [certificateFile, setCertificateFile] = useState(null);
   const [certificateFileName, setCertificateFileName] = useState("");
   const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
 
   useEffect(() => {
     fetchCompanies();
   }, []);
 
   const toggleQuestion = (index) => {
-    setExpandedQuestions(prev => ({
+    setExpandedQuestions((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
@@ -128,7 +130,7 @@ const TestResultsManagement = () => {
     setExpandedQuestions({});
   };
 
-  const handleOpenCertificateDialog = (company) => {
+  const handleOpenCertificateDialog = async (company) => {
     setSelectedUser({
       id: company.id,
       first_name: company.first_name || "",
@@ -137,7 +139,19 @@ const TestResultsManagement = () => {
       company_name: company.company_name,
       course_id: company.course_id,
     });
-    setOpenCertificateDialog(true);
+
+    // Call API to check existing certificate
+    const check = await getUploadCertificate(company.id, company.course_id);
+
+    const certificateExists = check?.data?.length > 0;
+
+    if (certificateExists) {
+      // Show replace confirmation
+      setShowReplaceDialog(true);
+    } else {
+      // Directly open upload dialog
+      setOpenCertificateDialog(true);
+    }
   };
 
   const handleCloseCertificateDialog = () => {
@@ -202,23 +216,24 @@ const TestResultsManagement = () => {
 
   // Modified: Calculate overall score across ALL answers
   const calculateOverallScore = (answers) => {
-    if (!answers || answers.length === 0) return { correct: 0, total: 0, percentage: 0 };
-    
+    if (!answers || answers.length === 0)
+      return { correct: 0, total: 0, percentage: 0 };
+
     // Count all correct answers regardless of course
     const correct = answers.filter((ans) => ans.isCorrect === true).length;
     const total = answers.length;
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-    
+
     return { correct, total, percentage };
   };
 
   // New: Get course breakdown for display
   const getCourseBreakdown = (answers) => {
     if (!answers || answers.length === 0) return [];
-    
+
     const courseMap = new Map();
-    
-    answers.forEach(answer => {
+
+    answers.forEach((answer) => {
       const courseName = answer.course_name || "Unknown Course";
       if (!courseMap.has(courseName)) {
         courseMap.set(courseName, {
@@ -227,22 +242,25 @@ const TestResultsManagement = () => {
           total: 0,
         });
       }
-      
+
       const course = courseMap.get(courseName);
       course.total++;
       if (answer.isCorrect === true) {
         course.correct++;
       }
     });
-    
-    return Array.from(courseMap.values()).map(course => ({
+
+    return Array.from(courseMap.values()).map((course) => ({
       ...course,
-      percentage: Math.round((course.correct / course.total) * 100)
+      percentage: Math.round((course.correct / course.total) * 100),
     }));
   };
 
   const getTotalEmployees = () => {
-    return companies.reduce((total, company) => total + (company.no_of_employees || 0), 0);
+    return companies.reduce(
+      (total, company) => total + (company.no_of_employees || 0),
+      0
+    );
   };
 
   return (
@@ -368,7 +386,9 @@ const TestResultsManagement = () => {
                       >
                         {[
                           company?.company_name,
-                          [company?.first_name, company?.last_name].filter(Boolean).join(" ")
+                          [company?.first_name, company?.last_name]
+                            .filter(Boolean)
+                            .join(" "),
                         ]
                           .filter(Boolean)
                           .join(" || ")}
@@ -379,13 +399,21 @@ const TestResultsManagement = () => {
                           fontSize: "13px",
                         }}
                       >
-                        {company.email} • <strong style={{ color: "#5B9FBD", textTransform: "capitalize" }}>{company.type}</strong>
+                        {company.email} •{" "}
+                        <strong
+                          style={{
+                            color: "#5B9FBD",
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {company.type}
+                        </strong>
                       </Typography>
                     </Box>
                   </Box>
-                  <Box 
-                    sx={{ 
-                      display: "flex", 
+                  <Box
+                    sx={{
+                      display: "flex",
                       gap: 2,
                       flexDirection: { xs: "column", sm: "row" },
                       width: { xs: "100%", sm: "auto" },
@@ -457,7 +485,8 @@ const TestResultsManagement = () => {
         >
           <Box>
             <Typography sx={{ fontWeight: 700, fontSize: "18px" }}>
-              Overall Test Results: {selectedUser?.first_name} {selectedUser?.last_name}
+              Overall Test Results: {selectedUser?.first_name}{" "}
+              {selectedUser?.last_name}
             </Typography>
             <Typography sx={{ fontSize: "13px", color: "#8b9ba5", mt: 0.5 }}>
               {selectedUser?.company_name} • {selectedUser?.email}
@@ -509,7 +538,7 @@ const TestResultsManagement = () => {
                       textAlign: "center",
                     }}
                   >
-                    Overall Performance Across All Courses
+                    Overall Performance Across All Training Modules
                   </Typography>
                   <Box
                     sx={{
@@ -536,7 +565,11 @@ const TestResultsManagement = () => {
                         Correct Answers
                       </Typography>
                     </Box>
-                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ display: { xs: "none", sm: "block" } }}
+                    />
                     <Box sx={{ textAlign: "center" }}>
                       <Typography
                         sx={{
@@ -554,7 +587,11 @@ const TestResultsManagement = () => {
                         Wrong Answers
                       </Typography>
                     </Box>
-                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ display: { xs: "none", sm: "block" } }}
+                    />
                     <Box sx={{ textAlign: "center" }}>
                       <Typography
                         sx={{
@@ -571,7 +608,11 @@ const TestResultsManagement = () => {
                         Overall Score
                       </Typography>
                     </Box>
-                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ display: { xs: "none", sm: "block" } }}
+                    />
                     <Box sx={{ textAlign: "center" }}>
                       <Typography
                         sx={{
@@ -612,9 +653,15 @@ const TestResultsManagement = () => {
                         mb: 2,
                       }}
                     >
-                      Course-wise Breakdown
+                      Training Module-wise Breakdown
                     </Typography>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1.5,
+                      }}
+                    >
                       {getCourseBreakdown(userAnswers).map((course, idx) => (
                         <Box
                           key={idx}
@@ -651,8 +698,18 @@ const TestResultsManagement = () => {
                           <Chip
                             label={`${course.percentage}%`}
                             sx={{
-                              bgcolor: course.percentage >= 70 ? "#E8F5E9" : course.percentage >= 50 ? "#FFF3E0" : "#FFEBEE",
-                              color: course.percentage >= 70 ? "#4CAF50" : course.percentage >= 50 ? "#FF9800" : "#f44336",
+                              bgcolor:
+                                course.percentage >= 70
+                                  ? "#E8F5E9"
+                                  : course.percentage >= 50
+                                  ? "#FFF3E0"
+                                  : "#FFEBEE",
+                              color:
+                                course.percentage >= 70
+                                  ? "#4CAF50"
+                                  : course.percentage >= 50
+                                  ? "#FF9800"
+                                  : "#f44336",
                               fontWeight: 700,
                               fontSize: "13px",
                             }}
@@ -668,7 +725,7 @@ const TestResultsManagement = () => {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {userAnswers.map((answer, index) => {
                   const isExpanded = expandedQuestions[index] || false;
-                  
+
                   return (
                     <Card
                       key={index}
@@ -720,7 +777,14 @@ const TestResultsManagement = () => {
                             </Typography>
                           </Box>
                           <Box sx={{ flex: 1 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                mb: 1,
+                              }}
+                            >
                               <Chip
                                 label={answer.course_name}
                                 size="small"
@@ -732,15 +796,29 @@ const TestResultsManagement = () => {
                                 }}
                               />
                               <Chip
-                                icon={answer.isCorrect ? <CheckCircleIcon /> : <CancelIcon />}
-                                label={answer.isCorrect ? "Correct" : "Incorrect"}
+                                icon={
+                                  answer.isCorrect ? (
+                                    <CheckCircleIcon />
+                                  ) : (
+                                    <CancelIcon />
+                                  )
+                                }
+                                label={
+                                  answer.isCorrect ? "Correct" : "Incorrect"
+                                }
                                 size="small"
                                 sx={{
-                                  bgcolor: answer.isCorrect ? "#E8F5E9" : "#FFEBEE",
-                                  color: answer.isCorrect ? "#4CAF50" : "#f44336",
+                                  bgcolor: answer.isCorrect
+                                    ? "#E8F5E9"
+                                    : "#FFEBEE",
+                                  color: answer.isCorrect
+                                    ? "#4CAF50"
+                                    : "#f44336",
                                   fontWeight: 700,
                                   fontSize: "12px",
-                                  border: `1px solid ${answer.isCorrect ? "#4CAF50" : "#f44336"}`,
+                                  border: `1px solid ${
+                                    answer.isCorrect ? "#4CAF50" : "#f44336"
+                                  }`,
                                 }}
                               />
                             </Box>
@@ -756,7 +834,11 @@ const TestResultsManagement = () => {
                             </Typography>
                           </Box>
                           <IconButton size="small">
-                            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            {isExpanded ? (
+                              <ExpandLessIcon />
+                            ) : (
+                              <ExpandMoreIcon />
+                            )}
                           </IconButton>
                         </Box>
                       </Box>
@@ -765,11 +847,20 @@ const TestResultsManagement = () => {
                       <Collapse in={isExpanded}>
                         <CardContent sx={{ pt: 0, pb: 2.5, px: 2.5 }}>
                           {/* All Options */}
-                          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 1.5,
+                            }}
+                          >
                             {answer.options?.map((option, optIdx) => {
-                              const isUserAnswer = option.text === answer.userAnswer || 
-                                                   option.text.trim() === answer.userAnswer?.trim();
-                              const isCorrectAnswer = option.is_correct === true;
+                              const isUserAnswer =
+                                option.text === answer.userAnswer ||
+                                option.text.trim() ===
+                                  answer.userAnswer?.trim();
+                              const isCorrectAnswer =
+                                option.is_correct === true;
 
                               let borderColor = "#e0e0e0";
                               let bgcolor = "#fff";
@@ -815,7 +906,10 @@ const TestResultsManagement = () => {
                                         : isUserAnswer
                                         ? "#f44336"
                                         : "#E8F4F8",
-                                      color: isCorrectAnswer || isUserAnswer ? "#fff" : "#5B9FBD",
+                                      color:
+                                        isCorrectAnswer || isUserAnswer
+                                          ? "#fff"
+                                          : "#5B9FBD",
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
@@ -844,7 +938,9 @@ const TestResultsManagement = () => {
                                         width: 28,
                                         height: 28,
                                         borderRadius: "50%",
-                                        bgcolor: isCorrectAnswer ? "#4CAF50" : "#f44336",
+                                        bgcolor: isCorrectAnswer
+                                          ? "#4CAF50"
+                                          : "#f44336",
                                         color: "#fff",
                                         display: "flex",
                                         alignItems: "center",
@@ -873,7 +969,13 @@ const TestResultsManagement = () => {
                                 flexWrap: "wrap",
                               }}
                             >
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 <Box
                                   sx={{
                                     width: 16,
@@ -882,11 +984,19 @@ const TestResultsManagement = () => {
                                     bgcolor: "#f44336",
                                   }}
                                 />
-                                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
+                                <Typography
+                                  sx={{ fontSize: "12px", color: "#64748B" }}
+                                >
                                   Your Answer
                                 </Typography>
                               </Box>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
                                 <Box
                                   sx={{
                                     width: 16,
@@ -895,7 +1005,9 @@ const TestResultsManagement = () => {
                                     bgcolor: "#4CAF50",
                                   }}
                                 />
-                                <Typography sx={{ fontSize: "12px", color: "#64748B" }}>
+                                <Typography
+                                  sx={{ fontSize: "12px", color: "#64748B" }}
+                                >
                                   Correct Answer
                                 </Typography>
                               </Box>
@@ -931,6 +1043,33 @@ const TestResultsManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog
+        open={showReplaceDialog}
+        onClose={() => setShowReplaceDialog(false)}
+      >
+        <DialogTitle>Certificate Already Exists</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mt: 1 }}>
+            A certificate has already been uploaded for this course. Do you want
+            to replace it?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowReplaceDialog(false)}>Cancel</Button>
+
+          <Button
+            variant="contained"
+            // color="error"
+            onClick={() => {
+              setShowReplaceDialog(false);
+              setOpenCertificateDialog(true);
+            }}
+            sx={{ background: "#5B9FBD" }}
+          >
+            Replace
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Upload Certificate Dialog */}
       <Dialog
@@ -960,7 +1099,9 @@ const TestResultsManagement = () => {
 
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: "16px", color: "#1a3a4a", fontWeight: 600 }}>
+            <Typography
+              sx={{ fontSize: "16px", color: "#1a3a4a", fontWeight: 600 }}
+            >
               {selectedUser?.first_name} {selectedUser?.last_name}
             </Typography>
             <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
@@ -1013,7 +1154,9 @@ const TestResultsManagement = () => {
                 }}
               >
                 <DownloadIcon sx={{ color: "#5B9FBD", fontSize: 20 }} />
-                <Typography sx={{ fontSize: "13px", color: "#1a3a4a", flex: 1 }}>
+                <Typography
+                  sx={{ fontSize: "13px", color: "#1a3a4a", flex: 1 }}
+                >
                   {certificateFileName}
                 </Typography>
                 <IconButton
@@ -1033,8 +1176,8 @@ const TestResultsManagement = () => {
         <DialogActions sx={{ p: 3, pt: 2, borderTop: "1px solid #e8eef2" }}>
           <Button
             onClick={handleCloseCertificateDialog}
-            sx={{ 
-              textTransform: "none", 
+            sx={{
+              textTransform: "none",
               color: "#8b9ba5",
               "&:hover": {
                 bgcolor: "#f5f7fa",

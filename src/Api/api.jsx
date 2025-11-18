@@ -548,5 +548,26 @@ export const getCompletedVideoQuestions = async (courseId) => {
     );
   }
 };
+export const getUploadCertificate = async (userId, courseId) => {
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const response = await api.get(
+      `/superadmin/certificates/?user=${userId}&course=${courseId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Check Certificate API Error:", error);
+    return error.response?.data || { data: [] };
+  }
+};
+
+
 
 export default api;
