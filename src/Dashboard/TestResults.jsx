@@ -345,120 +345,152 @@ const TestResultsManagement = () => {
           </Card>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {companies.map((company) => (
-              <Card
-                key={company.id}
-                sx={{
-                  borderRadius: "12px",
-                  border: "1px solid #e8eef2",
-                  boxShadow: "none",
-                  overflow: "hidden",
-                }}
-              >
-                <Box
+   {companies.map((company) => (
+  <Card
+    key={company.id}
+    sx={{
+      borderRadius: "12px",
+      border: "1px solid #e8eef2",
+      boxShadow: "none",
+      overflow: "hidden",
+      mb: 2,
+    }}
+  >
+    {/* COMPANY HEADER */}
+    <Box
+      sx={{
+        p: 2.5,
+        bgcolor: "#fff",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Avatar sx={{ bgcolor: "#5B9FBD" }}>
+          <BusinessIcon />
+        </Avatar>
+
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: "16px", color: "#1a3a4a" }}>
+            {company.company_name}
+          </Typography>
+
+          <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
+            {company.email}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* COMPANY TEST + CERTIFICATE BUTTONS (ADDED) */}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<AssessmentIcon />}
+          onClick={() => handleViewAnswers(company)}
+          sx={{
+            bgcolor: "#5B9FBD",
+            textTransform: "none",
+            fontWeight: 600,
+            "&:hover": { bgcolor: "#4a8a9f" },
+          }}
+        >
+          View Test
+        </Button>
+
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<CloudUploadIcon />}
+          onClick={() => handleOpenCertificateDialog(company)}
+          sx={{
+            bgcolor: "#9C27B0",
+            textTransform: "none",
+            fontWeight: 600,
+            "&:hover": { bgcolor: "#7B1FA2" },
+          }}
+        >
+          Certificate
+        </Button>
+      </Box>
+    </Box>
+
+    <Divider />
+
+    {/* EMPLOYEES LIST */}
+    <Box sx={{ p: 2 }}>
+      {company.employees?.length === 0 ? (
+        <Typography sx={{ textAlign: "center", color: "#8b9ba5" }}>
+          No employees found
+        </Typography>
+      ) : (
+        company.employees.map((emp) => (
+          <Card
+            key={emp.id}
+            sx={{
+              mb: 2,
+              p: 2,
+              borderRadius: "10px",
+              border: "1px solid #e8eef2",
+              boxShadow: "none",
+              bgcolor: "#fafbfc",
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Box>
+                <Typography sx={{ fontWeight: 700, color: "#1a3a4a" }}>
+                  {emp.first_name} {emp.last_name}
+                </Typography>
+                <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
+                  {emp.email}
+                </Typography>
+                <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
+                  {emp.cell_number}
+                </Typography>
+              </Box>
+
+              {/* EMPLOYEE ACTION BUTTONS */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AssessmentIcon />}
+                  onClick={() => handleViewAnswers(emp)}
                   sx={{
-                    p: 2.5,
-                    bgcolor: "#fff",
-                    display: "flex",
-                    flexDirection: { xs: "column", md: "row" },
-                    justifyContent: "space-between",
-                    alignItems: { xs: "flex-start", md: "center" },
-                    gap: 2,
+                    bgcolor: "#5B9FBD",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    "&:hover": { bgcolor: "#4a8a9f" },
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: "#5B9FBD",
-                        width: 48,
-                        height: 48,
-                      }}
-                    >
-                      <BusinessIcon />
-                    </Avatar>
-                    <Box>
-                      <Typography
-                        sx={{
-                          color: "#1a3a4a",
-                          fontWeight: 700,
-                          fontSize: "16px",
-                        }}
-                      >
-                        {[
-                          company?.company_name,
-                          [company?.first_name, company?.last_name]
-                            .filter(Boolean)
-                            .join(" "),
-                        ]
-                          .filter(Boolean)
-                          .join(" || ")}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: "#8b9ba5",
-                          fontSize: "13px",
-                        }}
-                      >
-                        {company.email} •{" "}
-                        <strong
-                          style={{
-                            color: "#5B9FBD",
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {company.type}
-                        </strong>
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                      flexDirection: { xs: "column", sm: "row" },
-                      width: { xs: "100%", sm: "auto" },
-                    }}
-                  >
-                    <Button
-                      variant="contained"
-                      startIcon={<AssessmentIcon />}
-                      onClick={() => handleViewAnswers(company)}
-                      fullWidth
-                      sx={{
-                        bgcolor: "#5B9FBD",
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderRadius: "8px",
-                        border: "none",
-                        "&:hover": {
-                          bgcolor: "#4a8a9f",
-                        },
-                      }}
-                    >
-                      View Test Results
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<CloudUploadIcon />}
-                      onClick={() => handleOpenCertificateDialog(company)}
-                      fullWidth
-                      sx={{
-                        bgcolor: "#9C27B0",
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderRadius: "8px",
-                        border: "none",
-                        "&:hover": {
-                          bgcolor: "#7B1FA2",
-                        },
-                      }}
-                    >
-                      Upload Certificate
-                    </Button>
-                  </Box>
-                </Box>
-              </Card>
-            ))}
+                  View Test
+                </Button>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  onClick={() => handleOpenCertificateDialog(emp)}
+                  sx={{
+                    bgcolor: "#9C27B0",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    "&:hover": { bgcolor: "#7B1FA2" },
+                  }}
+                >
+                  Certificate
+                </Button>
+              </Box>
+            </Box>
+          </Card>
+        ))
+      )}
+    </Box>
+  </Card>
+))}
+
+
           </Box>
         )}
       </Box>
