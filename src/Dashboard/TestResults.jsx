@@ -58,6 +58,8 @@ const TestResultsManagement = () => {
   const [certificateFileName, setCertificateFileName] = useState("");
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [selectedCourseForCertificate, setSelectedCourseForCertificate] =
+    useState(null);
 
   useEffect(() => {
     fetchCompanies();
@@ -117,7 +119,6 @@ const TestResultsManagement = () => {
       last_name: company.last_name || "",
       email: company.email,
       company_name: company.company_name,
-      course_id: company.course_id,
     });
     setOpenAnswersDialog(true);
     await fetchUserAnswers(company.id);
@@ -128,35 +129,41 @@ const TestResultsManagement = () => {
     setSelectedUser(null);
     setUserAnswers([]);
     setExpandedQuestions({});
+    setSelectedCourseForCertificate(null);
   };
 
-  const handleOpenCertificateDialog = async (company) => {
-    setSelectedUser({
-      id: company.id,
-      first_name: company.first_name || "",
-      last_name: company.last_name || "",
-      email: company.email,
-      company_name: company.company_name,
-      course_id: company.course_id,
+  const handleOpenCertificateDialog = async (courseName) => {
+    // Find the course ID from the user answers
+    const courseAnswer = userAnswers.find(
+      (answer) => answer.course_name === courseName
+    );
+    const courseId = courseAnswer?.course_id;
+
+    if (!courseId) {
+      toast.error("Course ID not found");
+      return;
+    }
+
+    setSelectedCourseForCertificate({
+      name: courseName,
+      id: courseId,
     });
 
-    // Call API to check existing certificate
-    const check = await getUploadCertificate(company.id, company.course_id);
+    const check = await getUploadCertificate(selectedUser.id, courseId);
+    console.log("🚀 ~ handleOpenCertificateDialog ~ check:", check);
 
     const certificateExists = check?.data?.length > 0;
 
     if (certificateExists) {
-      // Show replace confirmation
       setShowReplaceDialog(true);
     } else {
-      // Directly open upload dialog
       setOpenCertificateDialog(true);
     }
   };
 
   const handleCloseCertificateDialog = () => {
     setOpenCertificateDialog(false);
-    setSelectedUser(null);
+    setSelectedCourseForCertificate(null);
     setCertificateFile(null);
     setCertificateFileName("");
   };
@@ -186,8 +193,8 @@ const TestResultsManagement = () => {
       return;
     }
 
-    if (!selectedUser) {
-      toast.error("User not selected");
+    if (!selectedUser || !selectedCourseForCertificate) {
+      toast.error("User or course not selected");
       return;
     }
 
@@ -196,7 +203,7 @@ const TestResultsManagement = () => {
       const formData = new FormData();
       formData.append("pdf_file", certificateFile);
       formData.append("user", selectedUser.id);
-      formData.append("course", selectedUser.course_id);
+      formData.append("course", selectedCourseForCertificate.id);
 
       const response = await uploadCertificate(formData);
 
@@ -214,7 +221,7 @@ const TestResultsManagement = () => {
     }
   };
 
-  // Modified: Calculate overall score across ALL answers
+  // Calculate overall score across ALL answers
   const calculateOverallScore = (answers) => {
     if (!answers || answers.length === 0)
       return { correct: 0, total: 0, percentage: 0 };
@@ -227,7 +234,7 @@ const TestResultsManagement = () => {
     return { correct, total, percentage };
   };
 
-  // New: Get course breakdown for display
+  // Get course breakdown for display
   const getCourseBreakdown = (answers) => {
     if (!answers || answers.length === 0) return [];
 
@@ -240,6 +247,7 @@ const TestResultsManagement = () => {
           name: courseName,
           correct: 0,
           total: 0,
+          course_id: answer.course_id,
         });
       }
 
@@ -345,152 +353,145 @@ const TestResultsManagement = () => {
           </Card>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-   {companies.map((company) => (
-  <Card
-    key={company.id}
-    sx={{
-      borderRadius: "12px",
-      border: "1px solid #e8eef2",
-      boxShadow: "none",
-      overflow: "hidden",
-      mb: 2,
-    }}
-  >
-    {/* COMPANY HEADER */}
-    <Box
-      sx={{
-        p: 2.5,
-        bgcolor: "#fff",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <Avatar sx={{ bgcolor: "#5B9FBD" }}>
-          <BusinessIcon />
-        </Avatar>
-
-        <Box>
-          <Typography sx={{ fontWeight: 700, fontSize: "16px", color: "#1a3a4a" }}>
-            {company.company_name}
-          </Typography>
-
-          <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
-            {company.email}
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* COMPANY TEST + CERTIFICATE BUTTONS (ADDED) */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<AssessmentIcon />}
-          onClick={() => handleViewAnswers(company)}
-          sx={{
-            bgcolor: "#5B9FBD",
-            textTransform: "none",
-            fontWeight: 600,
-            "&:hover": { bgcolor: "#4a8a9f" },
-          }}
-        >
-          View Test
-        </Button>
-
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<CloudUploadIcon />}
-          onClick={() => handleOpenCertificateDialog(company)}
-          sx={{
-            bgcolor: "#9C27B0",
-            textTransform: "none",
-            fontWeight: 600,
-            "&:hover": { bgcolor: "#7B1FA2" },
-          }}
-        >
-          Certificate
-        </Button>
-      </Box>
-    </Box>
-
-    <Divider />
-
-    {/* EMPLOYEES LIST */}
-    <Box sx={{ p: 2 }}>
-      {company.employees?.length === 0 ? (
-        <Typography sx={{ textAlign: "center", color: "#8b9ba5" }}>
-          No employees found
-        </Typography>
-      ) : (
-        company.employees.map((emp) => (
-          <Card
-            key={emp.id}
-            sx={{
-              mb: 2,
-              p: 2,
-              borderRadius: "10px",
-              border: "1px solid #e8eef2",
-              boxShadow: "none",
-              bgcolor: "#fafbfc",
-            }}
-          >
-            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Box>
-                <Typography sx={{ fontWeight: 700, color: "#1a3a4a" }}>
-                  {emp.first_name} {emp.last_name}
-                </Typography>
-                <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
-                  {emp.email}
-                </Typography>
-                <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
-                  {emp.cell_number}
-                </Typography>
-              </Box>
-
-              {/* EMPLOYEE ACTION BUTTONS */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<AssessmentIcon />}
-                  onClick={() => handleViewAnswers(emp)}
+            {companies.map((company) => (
+              <Card
+                key={company.id}
+                sx={{
+                  borderRadius: "12px",
+                  border: "1px solid #e8eef2",
+                  boxShadow: "none",
+                  overflow: "hidden",
+                  mb: 2,
+                }}
+              >
+                {/* COMPANY HEADER */}
+                <Box
                   sx={{
-                    bgcolor: "#5B9FBD",
-                    textTransform: "none",
-                    fontWeight: 600,
-                    "&:hover": { bgcolor: "#4a8a9f" },
+                    p: 2.5,
+                    bgcolor: "#fff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  View Test
-                </Button>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Avatar sx={{ bgcolor: "#5B9FBD" }}>
+                      <BusinessIcon />
+                    </Avatar>
 
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<CloudUploadIcon />}
-                  onClick={() => handleOpenCertificateDialog(emp)}
-                  sx={{
-                    bgcolor: "#9C27B0",
-                    textTransform: "none",
-                    fontWeight: 600,
-                    "&:hover": { bgcolor: "#7B1FA2" },
-                  }}
-                >
-                  Certificate
-                </Button>
-              </Box>
-            </Box>
-          </Card>
-        ))
-      )}
-    </Box>
-  </Card>
-))}
+                    <Box>
+                      <Typography
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: "16px",
+                          color: "#1a3a4a",
+                        }}
+                      >
+                        {company.company_name}
+                      </Typography>
 
+                      <Typography sx={{ fontSize: "13px", color: "#8b9ba5" }}>
+                        {company.email}
+                      </Typography>
+                    </Box>
+                  </Box>
 
+                  {/* COMPANY TEST BUTTON ONLY */}
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<AssessmentIcon />}
+                      onClick={() => handleViewAnswers(company)}
+                      sx={{
+                        bgcolor: "#5B9FBD",
+                        textTransform: "none",
+                        fontWeight: 600,
+                        "&:hover": { bgcolor: "#4a8a9f" },
+                      }}
+                    >
+                      View Test
+                    </Button>
+                  </Box>
+                </Box>
+
+                <Divider />
+
+                {/* EMPLOYEES LIST */}
+                <Box sx={{ p: 2 }}>
+                  {company.employees?.length === 0 ? (
+                    <Typography sx={{ textAlign: "center", color: "#8b9ba5" }}>
+                      No employees found
+                    </Typography>
+                  ) : (
+                    company.employees.map((emp) => (
+                      <Card
+                        key={emp.id}
+                        sx={{
+                          mb: 2,
+                          p: 2,
+                          borderRadius: "10px",
+                          border: "1px solid #e8eef2",
+                          boxShadow: "none",
+                          bgcolor: "#fafbfc",
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Box>
+                            <Typography
+                              sx={{ fontWeight: 700, color: "#1a3a4a" }}
+                            >
+                              {emp.first_name} {emp.last_name}
+                            </Typography>
+                            <Typography
+                              sx={{ fontSize: "13px", color: "#8b9ba5" }}
+                            >
+                              {emp.email}
+                            </Typography>
+                            <Typography
+                              sx={{ fontSize: "13px", color: "#8b9ba5" }}
+                            >
+                              {emp.cell_number}
+                            </Typography>
+                          </Box>
+
+                          {/* EMPLOYEE TEST BUTTON ONLY */}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 1,
+                            }}
+                          >
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<AssessmentIcon />}
+                              onClick={() => handleViewAnswers(emp)}
+                              sx={{
+                                bgcolor: "#5B9FBD",
+                                textTransform: "none",
+                                fontWeight: 600,
+                                "&:hover": { bgcolor: "#4a8a9f" },
+                              }}
+                            >
+                              View Test
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Card>
+                    ))
+                  )}
+                </Box>
+              </Card>
+            ))}
           </Box>
         )}
       </Box>
@@ -666,7 +667,7 @@ const TestResultsManagement = () => {
               </Card>
 
               {/* Course-wise Breakdown */}
-              {getCourseBreakdown(userAnswers).length > 1 && (
+              {getCourseBreakdown(userAnswers).length > 0 && (
                 <Card
                   sx={{
                     mb: 3,
@@ -727,25 +728,49 @@ const TestResultsManagement = () => {
                               {course.correct} / {course.total} correct
                             </Typography>
                           </Box>
-                          <Chip
-                            label={`${course.percentage}%`}
+                          <Box
                             sx={{
-                              bgcolor:
-                                course.percentage >= 70
-                                  ? "#E8F5E9"
-                                  : course.percentage >= 50
-                                  ? "#FFF3E0"
-                                  : "#FFEBEE",
-                              color:
-                                course.percentage >= 70
-                                  ? "#4CAF50"
-                                  : course.percentage >= 50
-                                  ? "#FF9800"
-                                  : "#f44336",
-                              fontWeight: 700,
-                              fontSize: "13px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
                             }}
-                          />
+                          >
+                            <Chip
+                              label={`${course.percentage}%`}
+                              sx={{
+                                bgcolor:
+                                  course.percentage >= 70
+                                    ? "#E8F5E9"
+                                    : course.percentage >= 50
+                                    ? "#FFF3E0"
+                                    : "#FFEBEE",
+                                color:
+                                  course.percentage >= 70
+                                    ? "#4CAF50"
+                                    : course.percentage >= 50
+                                    ? "#FF9800"
+                                    : "#f44336",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                              }}
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<CloudUploadIcon />}
+                              onClick={() =>
+                                handleOpenCertificateDialog(course.name)
+                              }
+                              sx={{
+                                bgcolor: "#5B9FBD",
+                                textTransform: "none",
+                                fontWeight: 600,
+                                "&:hover": { bgcolor: "#5B9FBD" },
+                              }}
+                            >
+                              Certificate
+                            </Button>
+                          </Box>
                         </Box>
                       ))}
                     </Box>
@@ -1075,6 +1100,8 @@ const TestResultsManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Replace Certificate Dialog */}
       <Dialog
         open={showReplaceDialog}
         onClose={() => setShowReplaceDialog(false)}
@@ -1088,10 +1115,8 @@ const TestResultsManagement = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowReplaceDialog(false)}>Cancel</Button>
-
           <Button
             variant="contained"
-            // color="error"
             onClick={() => {
               setShowReplaceDialog(false);
               setOpenCertificateDialog(true);
@@ -1144,6 +1169,17 @@ const TestResultsManagement = () => {
           <Divider sx={{ my: 2 }} />
 
           <Box>
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#1a3a4a",
+                mb: 1,
+              }}
+            >
+              Training Module: {selectedCourseForCertificate?.name}
+            </Typography>
+
             <input
               accept="application/pdf"
               style={{ display: "none" }}

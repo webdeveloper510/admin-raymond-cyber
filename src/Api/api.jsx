@@ -476,7 +476,7 @@ export const getCourseList = async () => {
 export const getCompanyEmployeeList = async () => {
   try {
     const accessToken = localStorage.getItem("access_token");
-    const response = await api.get("/superadmin//test-companies-emp-list/", {
+    const response = await api.get("/superadmin/test-companies-emp-list/", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     return response.data;
