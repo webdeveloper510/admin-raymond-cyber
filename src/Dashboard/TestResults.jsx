@@ -498,7 +498,7 @@ const TestResultsManagement = () => {
                                 "&:hover": { bgcolor: "#4a8a9f" },
                               }}
                             >
-                              View Test
+                               Test Result
                             </Button>
                           </Box>
                         </Box>
